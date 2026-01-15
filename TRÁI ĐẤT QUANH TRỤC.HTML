@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thí Nghiệm: Chuyển Động Tự Quay & Hệ Quả</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; color: white; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; cursor: move; } /* Thêm cursor move */
+        
+        /* Giao diện điều khiển */
+        #ui-container {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 15, 30, 0.85);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #4da6ff;
+            width: 230px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10;
+        }
+
+        h1 { font-size: 14px; margin: 0 0 8px 0; color: #4da6ff; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        p.desc { font-size: 11px; color: #ccc; margin-bottom: 10px; line-height: 1.3; }
+
+        .control-group { margin-bottom: 8px; }
+        label { display: block; font-size: 11px; margin-bottom: 2px; color: #aaa; }
+        
+        button {
+            background: #0055aa;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            width: 100%;
+            margin-bottom: 4px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        button:hover { background: #004488; }
+        button.active { background: #00aa55; font-weight: bold; }
+        button.active::after { content: "✔"; }
+
+        input[type=range] { width: 100%; cursor: pointer; height: 6px; }
+
+        /* Hộp thông tin hướng dẫn quan sát */
+        #info-box {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid #666;
+            text-align: center;
+            font-size: 14px;
+            width: auto;
+            min-width: 300px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* Hướng dẫn xoay */
+        #rotate-hint {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255,255,255,0.5);
+            font-size: 12px;
+            font-style: italic;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .highlight { color: #ffeb3b; font-weight: bold; }
+        
+        /* Legend cho Coriolis */
+        #coriolis-legend {
+            display: none;
+            margin-top: 10px;
+            padding-top: 5px;
+            border-top: 1px dashed #555;
+            font-size: 10px;
+        }
+        .legend-item { display: flex; align-items: center; margin-bottom: 2px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; display: inline-block; }
+        .arrow-icon { width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 8px solid; display: inline-block; margin-right: 6px; transform: rotate(45deg); }
+    </style>
+    <!-- Thư viện 3D Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Thư viện OrbitControls để xoay camera -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="ui-container">
+        <h1>Bảng Điều Khiển</h1>
+        <p class="desc">Chủ đề: Chuyển động tự quay & Hệ quả (Địa lý 6)</p>
+        
+        <div class="control-group">
+            <button id="btn-toggle-rotation" class="active">Tự quay</button>
+        </div>
+
+        <div class="control-group">
+            <label>Tốc độ quay:</label>
+            <input type="range" id="slider-speed" min="0" max="5" step="0.1" value="1">
+        </div>
+
+        <div class="control-group">
+            <button id="btn-toggle-axis">Trục Trái Đất (23.5°)</button>
+        </div>
+
+        <div class="control-group" style="margin-top: 10px; border-top: 1px solid #333; padding-top: 5px;">
+            <label style="color: #ff9900; font-weight: bold;">HỆ QUẢ ĐỊA LÝ:</label>
+            <button id="btn-toggle-coriolis">Lực Coriolis (Vẽ đường)</button>
+        </div>
+
+        <div id="coriolis-legend">
+            <div class="legend-item"><span class="arrow-icon" style="border-bottom-color: #FFFF00;"></span>Bắc BC: Lệch phải</div>
+            <div class="legend-item"><span class="arrow-icon" style="border-bottom-color: #FF4400;"></span>Nam BC: Lệch trái</div>
+            <p style="margin-top:4px; font-style: italic; color: #888;">(Vật di chuyển vẽ ra đường cong)</p>
+        </div>
+    </div>
+
+    <div id="rotate-hint">🖱️ Kéo chuột để xoay góc nhìn</div>
+
+    <div id="info-box">
+        <span id="info-text">Quan sát điểm <b style="color:red">ĐỎ</b> để thấy ngày đêm luân phiên.</span>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        // Cấu hình cơ bản
+        let scene, camera, renderer, controls;
+        let earth, earthGroup, axisLine, sunLight, starField;
+        let coriolisParticles = []; 
+        let isRotating = true;
+        let isCoriolisActive = false;
+        let rotationSpeed = 0.005;
+        let markerMesh;
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 60); // Lùi xa hơn xíu để bao quát
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Controls (Cho phép xoay)
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; 
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 20;
+            controls.maxDistance = 200;
+
+            // Tạo các đối tượng
+            createStars();
+            createSun();
+            createEarthSystem();
+            
+            window.addEventListener('resize', onWindowResize, false);
+            setupControls();
+            
+            animate();
+        }
+
+        function createStars() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starMaterial = new THREE.PointsMaterial({color: 0xffffff, size: 0.15});
+            const starVertices = [];
+            for(let i=0; i<3000; i++) {
+                const x = (Math.random() - 0.5) * 400;
+                const y = (Math.random() - 0.5) * 400;
+                const z = (Math.random() - 0.5) * 400;
+                starVertices.push(x,y,z);
+            }
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            starField = new THREE.Points(starGeometry, starMaterial);
+            scene.add(starField);
+        }
+
+        function createSun() {
+            // ĐIỀU CHỈNH VỊ TRÍ MẶT TRỜI
+            // Đưa về phía trước (Z dương) và phải (X dương) để dễ thấy hơn từ góc nhìn mặc định
+            sunLight = new THREE.DirectionalLight(0xffffff, 1.4);
+            sunLight.position.set(40, 5, 30); 
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+
+            const ambientLight = new THREE.AmbientLight(0x404040); 
+            scene.add(ambientLight);
+            
+            const sunGeo = new THREE.SphereGeometry(4, 32, 32);
+            const sunMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
+            const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+            
+            // Vị trí hiển thị của mesh mặt trời
+            const sunPos = sunLight.position.clone().normalize().multiplyScalar(45); // Gần hơn xíu
+            sunMesh.position.copy(sunPos);
+            
+            const glowGeo = new THREE.SphereGeometry(6, 32, 32);
+            const glowMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.3 });
+            const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+            sunMesh.add(glowMesh);
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.font = "Bold 30px Arial";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.fillText("MẶT TRỜI", 128, 40);
+            
+            const labelTex = new THREE.CanvasTexture(canvas);
+            const labelMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true });
+            const labelSprite = new THREE.Sprite(labelMat);
+            labelSprite.position.set(0, -6, 0); 
+            labelSprite.scale.set(20, 5, 1);
+            sunMesh.add(labelSprite);
+
+            scene.add(sunMesh);
+        }
+
+        function createEarthTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#004488';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#228B22';
+            for (let i = 0; i < 60; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height * 0.8 + canvas.height * 0.1; 
+                const r = Math.random() * 60 + 10;
+                ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+            }
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            for(let i=1; i<10; i++) { let y = (i/10)*canvas.height; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+            for(let i=1; i<20; i++) { let x = (i/20)*canvas.width; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+            
+            ctx.strokeStyle = 'rgba(255,255,0,0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, canvas.height / 2); ctx.lineTo(canvas.width, canvas.height / 2); ctx.stroke();
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createEarthSystem() {
+            earthGroup = new THREE.Group();
+            
+            const geometry = new THREE.SphereGeometry(10, 64, 64);
+            const material = new THREE.MeshStandardMaterial({ map: createEarthTexture(), roughness: 0.7 });
+            earth = new THREE.Mesh(geometry, material);
+            earth.castShadow = true;
+            earth.receiveShadow = true;
+
+            const axisGeo = new THREE.CylinderGeometry(0.08, 0.08, 28, 8);
+            const axisMat = new THREE.MeshBasicMaterial({ color: 0xff3333 });
+            axisLine = new THREE.Mesh(axisGeo, axisMat);
+            axisLine.visible = false;
+
+            const markerGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const markerMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            markerMesh = new THREE.Mesh(markerGeo, markerMat);
+            
+            const lat = 21 * (Math.PI / 180);
+            const lon = -1.5; 
+            const r = 10;
+            markerMesh.position.set(r * Math.cos(lat) * Math.sin(lon), r * Math.sin(lat), r * Math.cos(lat) * Math.cos(lon));
+            
+            earth.add(markerMesh);
+            earthGroup.add(earth);
+            earthGroup.add(axisLine);
+            earthGroup.rotation.z = 23.5 * (Math.PI / 180);
+            scene.add(earthGroup);
+        }
+
+        function createArrowObject(color) {
+            const group = new THREE.Group();
+            const sphereGeo = new THREE.SphereGeometry(0.25, 12, 12);
+            const mat = new THREE.MeshBasicMaterial({ color: color });
+            const sphere = new THREE.Mesh(sphereGeo, mat);
+            group.add(sphere);
+
+            const coneGeo = new THREE.ConeGeometry(0.2, 0.8, 8);
+            coneGeo.rotateX(Math.PI / 2); 
+            const cone = new THREE.Mesh(coneGeo, mat);
+            cone.position.z = 0.5;
+            group.add(cone);
+            return group;
+        }
+
+        function initCoriolisParticles() {
+            const count = 8;
+            
+            const createParticle = (hemisphere, color) => {
+                const mesh = createArrowObject(color);
+                earth.add(mesh); 
+                mesh.visible = false;
+
+                const trailMat = new THREE.LineBasicMaterial({ color: color, opacity: 0.7, transparent: true, linewidth: 2 });
+                const trailGeo = new THREE.BufferGeometry();
+                const trailLine = new THREE.Line(trailGeo, trailMat);
+                earth.add(trailLine); 
+                trailLine.visible = false;
+
+                return {
+                    mesh: mesh,
+                    trail: trailLine,
+                    trailPoints: [],
+                    hemisphere: hemisphere,
+                    startLat: hemisphere === 'north' ? 65 : -65,
+                    currentLat: hemisphere === 'north' ? 65 : -65,
+                    currentLon: 0, 
+                    speedLat: 0.25, 
+                    offsetLon: 0 
+                };
+            };
+            
+            for(let i=0; i<count; i++) {
+                const p = createParticle('north', 0xFFFF00);
+                p.currentLon = (i / count) * 360;
+                coriolisParticles.push(p);
+            }
+
+            for(let i=0; i<count; i++) {
+                const p = createParticle('south', 0xFF4400);
+                p.currentLon = (i / count) * 360;
+                coriolisParticles.push(p);
+            }
+        }
+
+        function updateCoriolisParticles() {
+            if (!isCoriolisActive) {
+                coriolisParticles.forEach(p => {
+                    p.mesh.visible = false;
+                    p.trail.visible = false;
+                });
+                return;
+            }
+
+            const r = 10.1;
+
+            coriolisParticles.forEach(p => {
+                p.mesh.visible = true;
+                p.trail.visible = true;
+
+                if (p.hemisphere === 'north') {
+                    p.currentLat -= p.speedLat;
+                    p.offsetLon -= 0.3; 
+                    if (p.currentLat < 5) { 
+                        p.currentLat = p.startLat; 
+                        p.offsetLon = 0; 
+                        p.trailPoints = []; 
+                    }
+                } else {
+                    p.currentLat += p.speedLat;
+                    p.offsetLon -= 0.3; 
+                    if (p.currentLat > -5) { 
+                        p.currentLat = p.startLat; 
+                        p.offsetLon = 0; 
+                        p.trailPoints = [];
+                    }
+                }
+
+                const latRad = p.currentLat * (Math.PI / 180);
+                const lonRad = (p.currentLon + p.offsetLon) * (Math.PI / 180);
+                const currentPos = new THREE.Vector3(
+                    r * Math.cos(latRad) * Math.sin(lonRad),
+                    r * Math.sin(latRad),
+                    r * Math.cos(latRad) * Math.cos(lonRad)
+                );
+                
+                p.mesh.position.copy(currentPos);
+
+                p.trailPoints.push(currentPos.clone());
+                if (p.trailPoints.length > 200) p.trailPoints.shift();
+                p.trail.geometry.setFromPoints(p.trailPoints);
+
+                let nextLat = p.currentLat + (p.hemisphere === 'north' ? -p.speedLat : p.speedLat);
+                let nextOffset = p.offsetLon - 0.3;
+                const nextLatRad = nextLat * (Math.PI / 180);
+                const nextLonRad = (p.currentLon + nextOffset) * (Math.PI / 180);
+                const nextPos = new THREE.Vector3(
+                    r * Math.cos(nextLatRad) * Math.sin(nextLonRad),
+                    r * Math.sin(nextLatRad),
+                    r * Math.cos(nextLatRad) * Math.cos(nextLonRad)
+                );
+                p.mesh.up.copy(currentPos).normalize();
+                p.mesh.lookAt(nextPos);
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function setupControls() {
+            const btnToggle = document.getElementById('btn-toggle-rotation');
+            const sliderSpeed = document.getElementById('slider-speed');
+            const btnAxis = document.getElementById('btn-toggle-axis');
+            const btnCoriolis = document.getElementById('btn-toggle-coriolis');
+            const coriolisLegend = document.getElementById('coriolis-legend');
+            const infoText = document.getElementById('info-text');
+
+            btnToggle.addEventListener('click', () => {
+                isRotating = !isRotating;
+                btnToggle.classList.toggle('active');
+            });
+
+            sliderSpeed.addEventListener('input', (e) => {
+                rotationSpeed = parseFloat(e.target.value) * 0.005;
+            });
+
+            btnAxis.addEventListener('click', () => {
+                axisLine.visible = !axisLine.visible;
+                btnAxis.classList.toggle('active');
+            });
+
+            btnCoriolis.addEventListener('click', () => {
+                isCoriolisActive = !isCoriolisActive;
+                btnCoriolis.classList.toggle('active');
+                coriolisLegend.style.display = isCoriolisActive ? 'block' : 'none';
+                
+                if(isCoriolisActive) {
+                    infoText.innerHTML = "Vệt đường cho thấy sự lệch hướng khi vật di chuyển về Xích đạo.";
+                } else {
+                    infoText.innerHTML = "Quan sát điểm <b style='color:red'>ĐỎ</b> để thấy ngày đêm luân phiên.";
+                }
+            });
+
+            initCoriolisParticles();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (controls) controls.update(); // Update controls cho smooth damping
+
+            if (isRotating && earth) {
+                earth.rotation.y += rotationSpeed;
+            }
+
+            updateCoriolisParticles();
+
+            if (markerMesh && earth && !isCoriolisActive) {
+                const vector = new THREE.Vector3();
+                markerMesh.getWorldPosition(vector);
+                const sunDir = sunLight.position.clone().normalize();
+                const dot = vector.normalize().dot(sunDir);
+                
+                const infoText = document.getElementById('info-text');
+                if (dot > 0.1) {
+                    infoText.innerHTML = "Điểm đỏ đang là <span class='highlight'>BAN NGÀY</span>";
+                } else if (dot < -0.1) {
+                    infoText.innerHTML = "Điểm đỏ đang là <span class='highlight'>BAN ĐÊM</span>";
+                } else {
+                    infoText.innerHTML = "Điểm đỏ đang là <span class='highlight'>HOÀNG HÔN / BÌNH MINH</span>";
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>

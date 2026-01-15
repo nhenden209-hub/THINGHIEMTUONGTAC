@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Phỏng Sóng Biển & Rừng Phi Lao - Địa Lý 6</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #e0f7fa;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: #0277bd;
+            color: white;
+            width: 100%;
+            text-align: center;
+            padding: 15px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; }
+        p.subtitle { margin: 5px 0 0; font-size: 0.9rem; opacity: 0.9; }
+
+        #container {
+            position: relative;
+            width: 90%;
+            max-width: 1000px;
+            margin-top: 20px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 100%);
+        }
+
+        #controls {
+            padding: 20px;
+            background-color: #f1f8e9;
+            border-top: 1px solid #ddd;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 200px;
+        }
+
+        label { font-weight: bold; margin-bottom: 5px; color: #2e7d32; }
+
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .btn-toggle {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-off {
+            background-color: #bdbdbd;
+            color: #555;
+        }
+
+        .btn-on {
+            background-color: #2e7d32;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        #status-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        #impact-meter {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #4caf50, #ffeb3b, #f44336);
+            transition: width 0.3s ease;
+        }
+
+        .legend {
+            font-size: 0.85rem;
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff3e0;
+            border-radius: 8px;
+            border-left: 5px solid #ff9800;
+        }
+
+        .floating-info {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            border: 1px solid #ccc;
+        }
+        
+        .erosion-warning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: none;
+            animation: pulse 1s infinite;
+            pointer-events: none;
+            text-align: center;
+            z-index: 10;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* AI Section Styles */
+        #ai-section {
+            background: white;
+            width: 90%;
+            max-width: 1000px;
+            margin-top: 20px;
+            margin-bottom: 40px;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 2px solid #e1f5fe;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            color: #01579b;
+        }
+        
+        .ai-header h2 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+
+        .ai-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-ai {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: transform 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .btn-ai:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-ai:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #ai-response {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 60px;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-left: 4px solid #2196F3;
+            position: relative;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top-color: #2196F3;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        #user-question {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            outline: none;
+        }
+        
+        #user-question:focus { border-color: #2196F3; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Mô Phỏng Sóng Biển & Tác Dụng Của Rừng Phi Lao</h1>
+    <p class="subtitle">Địa lý Lớp 6 - Chủ đề: Biển và Đại Dương</p>
+</header>
+
+<div id="container">
+    <canvas id="oceanCanvas"></canvas>
+    
+    <div id="erosionMsg" class="erosion-warning">
+        ⚠️ CẢNH BÁO: BỜ BIỂN ĐANG BỊ XÂM THỰC!<br>
+        <span style="font-size:0.8em; font-weight:normal;">(Cần trồng rừng chắn sóng ngay)</span>
+    </div>
+
+    <!-- Legend overlay for particles -->
+    <div class="floating-info" style="top: 20px; left: 20px;">
+        <span style="color:red; font-weight:bold;">●</span> Phân tử nước (chuyển động thẳng đứng)
+    </div>
+
+    <div id="controls">
+        <!-- Wind Control -->
+        <div class="control-group">
+            <label for="windRange">Sức Gió: <span id="windValue">Nhẹ</span></label>
+            <input type="range" id="windRange" min="1" max="10" value="3" step="0.5">
+            <small>Gió càng mạnh, sóng càng lớn</small>
+        </div>
+
+        <!-- Tree Toggle -->
+        <div class="control-group">
+            <label>Bảo vệ bờ biển</label>
+            <button id="treeBtn" class="btn-toggle btn-off" onclick="toggleTrees()">
+                <span>🌱 Trồng Rừng Phi Lao</span>
+            </button>
+        </div>
+
+        <!-- Impact Meter -->
+        <div class="control-group" style="width: 250px;">
+            <label>Nguy cơ xâm thực bờ biển</label>
+            <div id="status-bar">
+                <div id="impact-meter"></div>
+            </div>
+            <small id="impact-text" style="margin-top:5px; font-weight:bold;">Thấp</small>
+        </div>
+    </div>
+    
+    <div style="padding: 0 20px 20px 20px;">
+        <div class="legend">
+            <strong>Kiến thức cần nhớ:</strong>
+            <ul>
+                <li>Nguyên nhân chủ yếu sinh ra sóng biển là do <b>GIÓ</b>.</li>
+                <li>Khi gió lớn và <b>không có rừng chắn sóng</b>, sóng biển sẽ đánh mạnh vào bờ gây ra hiện tượng <b>xâm thực</b> (lở đất, mất bãi biển).</li>
+                <li>Rừng phi lao ven bờ giúp <b>chắn gió, giảm sức sóng</b>, bảo vệ bờ biển không bị xâm thực.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- AI Section -->
+<div id="ai-section">
+    <div class="ai-header">
+        <h2>✨ Góc Học Tập Thông Minh (AI)</h2>
+    </div>
+    
+    <div class="ai-controls">
+        <button class="btn-ai" onclick="explainScenario()">
+            <span>🔍 Giải thích hiện tượng này</span>
+        </button>
+        <button class="btn-ai" onclick="generateQuiz()">
+            <span>❓ Đố vui Địa lý</span>
+        </button>
+    </div>
+
+    <div id="ai-response">
+        Hãy thay đổi sức gió hoặc trồng cây, rồi bấm nút trên để Thầy giáo AI giải thích nhé!
+    </div>
+
+    <div class="chat-input-area">
+        <input type="text" id="user-question" placeholder="Hỏi thêm thầy giáo AI về biển...">
+        <button class="btn-ai" onclick="askCustomQuestion()">Gửi</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('oceanCanvas');
+    const ctx = canvas.getContext('2d');
+    const erosionMsg = document.getElementById('erosionMsg');
+    
+    // Config
+    let width, height;
+    let time = 0;
+    
+    // Simulation Parameters
+    let windSpeed = 3; // 1 to 10
+    let hasTrees = false;
+    
+    // Erosion state
+    let currentErosion = 0; // 0 = no erosion, 1 = max erosion
+    let targetErosion = 0;
+    
+    // Wave parameters
+    const baseAmplitude = 10;
+    const baseFrequency = 0.01;
+    const waterColor = 'rgba(0, 105, 148, 0.8)';
+    const deepWaterColor = 'rgba(0, 60, 100, 1)';
+    
+    // Particles (Water molecules)
+    const particles = [];
+    const numParticles = 10;
+
+    // Elements
+    const windRange = document.getElementById('windRange');
+    const windLabel = document.getElementById('windValue');
+    const treeBtn = document.getElementById('treeBtn');
+    const impactMeter = document.getElementById('impact-meter');
+    const impactText = document.getElementById('impact-text');
+    const aiResponse = document.getElementById('ai-response');
+    const userQuestionInput = document.getElementById('user-question');
+
+    function resize() {
+        width = canvas.width = canvas.offsetWidth;
+        height = canvas.height = canvas.offsetHeight;
+        initParticles();
+    }
+
+    function initParticles() {
+        particles.length = 0;
+        // Create particles spread across the ocean part (left 80%)
+        for(let i = 0; i < numParticles; i++) {
+            particles.push({
+                x: 50 + (i * (width * 0.7) / numParticles),
+                baseY: height * 0.6
+            });
+        }
+    }
+
+    window.addEventListener('resize', resize);
+    
+    // Input Listeners
+    windRange.addEventListener('input', (e) => {
+        windSpeed = parseFloat(e.target.value);
+        updateUI();
+    });
+
+    function toggleTrees() {
+        hasTrees = !hasTrees;
+        if(hasTrees) {
+            treeBtn.classList.remove('btn-off');
+            treeBtn.classList.add('btn-on');
+            treeBtn.innerHTML = "🌲 Đã có Rừng Phi Lao";
+        } else {
+            treeBtn.classList.remove('btn-on');
+            treeBtn.classList.add('btn-off');
+            treeBtn.innerHTML = "🌱 Trồng Rừng Phi Lao";
+        }
+        updateUI();
+    }
+
+    function updateUI() {
+        // Wind Text
+        if(windSpeed < 3) windLabel.innerText = "Nhẹ";
+        else if(windSpeed < 7) windLabel.innerText = "Trung Bình";
+        else windLabel.innerText = "Mạnh (Bão)";
+
+        // Impact Meter Calculation
+        let rawImpact = windSpeed * 10; // 0 to 100
+        
+        // Erosion Logic:
+        // High wind (> 5) AND No Trees = High Erosion Risk
+        let isHighRisk = (windSpeed > 5 && !hasTrees);
+        
+        if (hasTrees) {
+            rawImpact = rawImpact * 0.2; // Trees drastically reduce impact
+        }
+
+        impactMeter.style.width = rawImpact + "%";
+        
+        if (isHighRisk) {
+            // High Risk Condition
+            impactText.innerText = "NGUY HIỂM: Đang xâm thực!";
+            impactText.style.color = "red";
+            erosionMsg.style.display = "block";
+            targetErosion = 1; // Move beach back
+        } else {
+            // Safe Condition
+            erosionMsg.style.display = "none";
+            targetErosion = 0; // Restore beach
+            
+            if(rawImpact < 30) {
+                impactText.innerText = "An Toàn";
+                impactText.style.color = "green";
+            } else {
+                impactText.innerText = "Được bảo vệ (Sóng lớn nhưng có rừng)";
+                impactText.style.color = "#2e7d32";
+            }
+        }
+    }
+
+    function drawSky() {
+        // Draw Wind Streaks
+        if (windSpeed > 2) {
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.lineWidth = 2;
+            const speedFactor = windSpeed * 2;
+            
+            for(let i=0; i<5; i++) {
+                let y = 50 + i * 30;
+                let x = (time * speedFactor * 2 + i * 100) % width;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + 50 + windSpeed * 10, y);
+                ctx.stroke();
+            }
+        }
+
+        // Draw Sun
+        ctx.fillStyle = "#FFD700";
+        ctx.beginPath();
+        ctx.arc(60, 60, 40, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function drawBeach() {
+        if(currentErosion < targetErosion) currentErosion += 0.01;
+        if(currentErosion > targetErosion) currentErosion -= 0.01;
+
+        let beachStartFactor = 0.75 + (currentErosion * 0.13); 
+
+        // Draw Sandy Beach
+        ctx.fillStyle = "#F4A460"; // Sandy brown
+        ctx.beginPath();
+        ctx.moveTo(width, height);
+        
+        let beachBottomX = width * beachStartFactor;
+        
+        ctx.lineTo(beachBottomX, height);
+        
+        let cp1x = width * (0.75 + currentErosion * 0.15); 
+        let cp1y = height * 0.7;
+        let cp2x = width * (0.8 + currentErosion * 0.1); 
+        let cp2y = height * 0.5;
+        let endX = width; 
+        let endY = height * 0.4;
+
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+        ctx.fill();
+
+        // Draw "Erosion Scar"
+        if (currentErosion > 0.1) {
+             ctx.strokeStyle = "#8D6E63";
+             ctx.lineWidth = 3;
+             ctx.beginPath();
+             ctx.moveTo(beachBottomX, height);
+             ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+             ctx.stroke();
+        }
+
+        // Draw Trees
+        if(hasTrees) {
+            drawForest(width * 0.82, height * 0.45);
+        }
+    }
+
+    function drawForest(startX, startY) {
+        const treeCount = 8;
+        for(let i=0; i<treeCount; i++) {
+            let tx = startX + i * 15 + Math.sin(i)*10;
+            let ty = startY + Math.cos(i)*10;
+            
+            // Trunk
+            ctx.fillStyle = "#5D4037";
+            ctx.fillRect(tx, ty - 60, 4, 60);
+            
+            // Foliage
+            ctx.fillStyle = "#2E7D32";
+            ctx.beginPath();
+            ctx.moveTo(tx - 10, ty - 20);
+            ctx.lineTo(tx + 2, ty - 90 - (i%3)*10);
+            ctx.lineTo(tx + 14, ty - 20);
+            ctx.fill();
+        }
+
+        // Visual Barrier line
+        if(windSpeed > 4) {
+             ctx.strokeStyle = "rgba(255,255,255,0.5)";
+             ctx.setLineDash([5, 5]);
+             ctx.beginPath();
+             ctx.moveTo(startX - 20, startY);
+             ctx.lineTo(startX - 20, startY - 80);
+             ctx.stroke();
+             ctx.setLineDash([]);
+        }
+    }
+
+    function drawOcean() {
+        ctx.beginPath();
+        ctx.moveTo(0, height);
+        ctx.lineTo(0, height * 0.6);
+
+        let currentAmp = baseAmplitude + (windSpeed * 3);
+        let currentFreq = baseFrequency + (windSpeed * 0.001);
+        let currentSpeed = time * (0.05 + windSpeed * 0.01);
+
+        let beachStartFactor = 0.75 + (currentErosion * 0.13);
+        let beachXLimit = width * beachStartFactor;
+        let visualLimit = beachXLimit + (width * 0.05);
+
+        for (let x = 0; x <= visualLimit; x += 5) {
+            let damping = 1;
+            
+            // Damping Logic
+            if (hasTrees && x > width * 0.6) {
+                let distToShore = (width * 0.8) - x;
+                let maxDist = (width * 0.8) - (width * 0.6);
+                damping = Math.max(0.1, distToShore / maxDist);
+            } 
+            else if (!hasTrees && x > width * 0.65) {
+                if (windSpeed > 5) damping = 0.8; 
+                else damping = Math.max(0.5, (beachXLimit - x) / 100);
+            }
+
+            let y = (height * 0.6) + Math.sin(x * currentFreq - currentSpeed) * (currentAmp * damping);
+            
+            if (x >= beachXLimit) {
+                 let runUp = (height * 0.6) + (x - beachXLimit) * 0.8;
+                 y = Math.min(y, runUp);
+            }
+            
+            ctx.lineTo(x, y);
+        }
+
+        ctx.lineTo(visualLimit, height);
+        ctx.lineTo(0, height);
+        
+        let grad = ctx.createLinearGradient(0, height * 0.6, 0, height);
+        grad.addColorStop(0, waterColor);
+        grad.addColorStop(1, deepWaterColor);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        drawParticles(currentAmp, currentFreq, currentSpeed);
+        
+        if(currentErosion > 0.5 && windSpeed > 5) {
+            drawErosionDebris(beachXLimit);
+        }
+    }
+
+    function drawErosionDebris(beachX) {
+        ctx.fillStyle = "#8D6E63";
+        for(let i=0; i<5; i++) {
+            let dx = beachX - Math.random() * 30;
+            let dy = height * 0.6 + Math.random() * 20;
+            ctx.beginPath();
+            ctx.arc(dx, dy, 2 + Math.random()*3, 0, Math.PI*2);
+            ctx.fill();
+        }
+    }
+
+    function drawParticles(amp, freq, speed) {
+        ctx.fillStyle = "#FF3D00";
+        ctx.strokeStyle = "rgba(255, 61, 0, 0.3)";
+        ctx.lineWidth = 1;
+
+        particles.forEach(p => {
+            let damping = 1;
+            if (hasTrees && p.x > width * 0.6) {
+                let distToShore = (width * 0.8) - p.x;
+                let maxDist = (width * 0.8) - (width * 0.6);
+                damping = Math.max(0.2, distToShore / maxDist);
+            }
+
+            let y = p.baseY + Math.sin(p.x * freq - speed) * (amp * damping);
+
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.baseY - amp - 10);
+            ctx.lineTo(p.x, p.baseY + amp + 10);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(p.x, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+
+        drawSky();
+        drawBeach();
+        drawOcean();
+
+        time += 1;
+        requestAnimationFrame(animate);
+    }
+    
+    // --- GEMINI API INTEGRATION ---
+    const apiKey = ""; // System provides the key
+
+    async function callGemini(userPrompt, systemInstruction) {
+        showLoading();
+        try {
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        systemInstruction: { parts: [{ text: systemInstruction }] }
+                    })
+                }
+            );
+
+            if (!response.ok) throw new Error('Network response was not ok');
+            const data = await response.json();
+            const text = data.candidates[0].content.parts[0].text;
+            displayAIResponse(text);
+        } catch (error) {
+            console.error("Lỗi AI:", error);
+            displayAIResponse("Xin lỗi, thầy giáo AI đang bận một chút. Em thử lại sau nhé!");
+        }
+    }
+
+    function showLoading() {
+        aiResponse.innerHTML = 'Thầy giáo AI đang suy nghĩ... <div class="loading-spinner"></div>';
+    }
+
+    function displayAIResponse(text) {
+        // Format simple markdown to HTML (bold and lists)
+        let formatted = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
+        aiResponse.innerHTML = formatted;
+    }
+
+    function explainScenario() {
+        const treeStatus = hasTrees ? "đã trồng rừng phi lao chắn sóng" : "chưa có rừng chắn sóng";
+        const windLevel = windSpeed < 3 ? "nhẹ" : (windSpeed < 7 ? "trung bình" : "rất mạnh (bão)");
+        const erosionStatus = (windSpeed > 5 && !hasTrees) ? "đang bị xâm thực mạnh, đất đai bị cuốn trôi" : "an toàn hoặc được bảo vệ tốt";
+
+        const prompt = `Hiện tại trên mô hình: Sức gió đang ở mức ${windSpeed}/10 (${windLevel}). Bờ biển ${treeStatus}. Tình trạng bờ biển: ${erosionStatus}. 
+        Hãy giải thích cho học sinh lớp 6 hiểu tại sao lại có hiện tượng sóng như vậy và vai trò của rừng phi lao trong tình huống này.`;
+        
+        const systemPrompt = "Bạn là một thầy giáo địa lý thân thiện, vui tính dạy lớp 6. Hãy giải thích ngắn gọn, dễ hiểu, dùng từ ngữ đơn giản. Tập trung vào mối quan hệ giữa gió -> sóng và tác dụng chắn sóng của rừng.";
+        
+        callGemini(prompt, systemPrompt);
+    }
+
+    function generateQuiz() {
+        const prompt = "Hãy tạo một câu hỏi trắc nghiệm (3 đáp án A, B, C) vui vẻ về chủ đề sóng biển, gió hoặc tác dụng của rừng phòng hộ ven biển. Sau đó đưa ra đáp án đúng và giải thích ngắn gọn.";
+        const systemPrompt = "Bạn là thầy giáo vui tính. Tạo câu hỏi cho học sinh lớp 6. Định dạng câu trả lời rõ ràng.";
+        callGemini(prompt, systemPrompt);
+    }
+
+    function askCustomQuestion() {
+        const question = userQuestionInput.value.trim();
+        if (!question) return;
+        
+        const systemPrompt = "Bạn là chuyên gia địa lý và hải dương học dành cho trẻ em. Hãy trả lời câu hỏi của học sinh một cách ngắn gọn, chính xác nhưng dễ hiểu.";
+        callGemini(question, systemPrompt);
+        userQuestionInput.value = '';
+    }
+
+    // Allow Enter key in input
+    userQuestionInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            askCustomQuestion();
+        }
+    });
+
+    // Init
+    resize();
+    updateUI(); 
+    animate();
+
+</script>
+
+</body>
+</html>

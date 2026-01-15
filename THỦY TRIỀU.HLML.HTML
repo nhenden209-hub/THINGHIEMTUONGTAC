@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Phỏng Thủy Triều - Địa Lý Lớp 6</title>
+    <style>
+        /* Thiết lập cơ bản cho trang web */
+        body {
+            margin: 0;
+            overflow: hidden; /* Ẩn thanh cuộn */
+            background-color: #050510; /* Màu nền vũ trụ */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Container chứa Canvas */
+        #simulation-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Canvas vẽ đồ họa */
+        canvas {
+            display: block;
+        }
+
+        /* Bảng điều khiển (UI) */
+        #ui-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            transform: none;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(100, 200, 255, 0.5);
+            width: auto;
+            min-width: 300px;
+            max-width: 600px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border: 2px solid #4facfe;
+        }
+
+        /* Bảng thông tin trạng thái ở góc trên */
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ffd200;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 300px;
+        }
+
+        h2, h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .status-text {
+            font-size: 1em;
+            font-weight: bold;
+            color: #ffd200;
+        }
+
+        .description {
+            font-size: 0.85em;
+            color: #ddd;
+        }
+
+        /* Các nút bấm và thanh trượt */
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 6px 14px;
+            font-size: 0.9em;
+            cursor: pointer;
+            background-color: #4facfe;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            transition: transform 0.2s, background-color 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #00f2fe;
+            transform: scale(1.05);
+        }
+
+        button.active {
+            background-color: #ff5e62;
+        }
+
+        /* Tùy chỉnh thanh trượt (slider) */
+        input[type=range] {
+            width: 180px;
+            cursor: pointer;
+        }
+
+        label {
+            font-size: 0.9em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        /* Responsive cho màn hình nhỏ */
+        @media (max-width: 600px) {
+            #ui-panel {
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90%;
+                bottom: 10px;
+                padding: 8px;
+            }
+            input[type=range] {
+                width: 120px;
+            }
+            .controls {
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="simulation-container">
+        <!-- Khu vực hiển thị thông tin trạng thái -->
+        <div id="info-panel">
+            <h3>Thông tin Thủy Triều</h3>
+            <div id="status-display" class="status-text">Đang tải...</div>
+            <p id="desc-display" class="description">Quan sát vị trí Mặt Trăng và Mặt Trời.</p>
+        </div>
+
+        <!-- Màn hình vẽ đồ họa -->
+        <canvas id="spaceCanvas"></canvas>
+
+        <!-- Bảng điều khiển -->
+        <div id="ui-panel">
+            <h2>Bộ Điều Khiển Thí Nghiệm</h2>
+            <div class="controls">
+                <div>
+                    <label for="moonSlider">Xoay Mặt Trăng:</label>
+                    <input type="range" id="moonSlider" min="0" max="360" value="0">
+                </div>
+                
+                <button id="btnAuto">▶ Tự động chạy</button>
+                
+                <label>
+                    <input type="checkbox" id="checkForce" checked>
+                    Hiển thị lực hút
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * LOGIC CHƯƠNG TRÌNH MÔ PHỎNG THỦY TRIỀU
+         * Dành cho học sinh lớp 6 - Code by Gemini AI
+         */
+
+        // 1. CẤU HÌNH & KHỞI TẠO
+        const canvas = document.getElementById('spaceCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Biến trạng thái
+        let width, height;
+        let moonAngle = 0; // Góc của mặt trăng (0 - 360 độ)
+        let isRunning = false;
+        let showForces = true;
+        
+        // Các hằng số vẽ (kích thước)
+        const SUN_RADIUS = 60;
+        const EARTH_RADIUS = 50;
+        const MOON_RADIUS = 15;
+        const ORBIT_RADIUS = 200; // Khoảng cách từ Trái Đất đến Mặt Trăng
+        const WATER_BASE_RADIUS = 55; // Bán kính nước khi chưa biến dạng
+        
+        // Danh sách các ngôi sao ngẫu nhiên
+        const stars = [];
+        for(let i=0; i<200; i++) {
+            stars.push({
+                x: Math.random(),
+                y: Math.random(),
+                size: Math.random() * 2,
+                alpha: Math.random()
+            });
+        }
+
+        // DOM Elements
+        const slider = document.getElementById('moonSlider');
+        const btnAuto = document.getElementById('btnAuto');
+        const checkForce = document.getElementById('checkForce');
+        const statusDisplay = document.getElementById('status-display');
+        const descDisplay = document.getElementById('desc-display');
+
+        // Hàm thay đổi kích thước canvas khi cửa sổ thay đổi
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // 2. CÁC HÀM VẼ ĐỒ HỌA (DRAWING FUNCTIONS)
+
+        // Vẽ nền vũ trụ và ngôi sao
+        function drawBackground() {
+            ctx.fillStyle = '#0b0b15'; // Màu đen xanh đậm
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.fillStyle = 'white';
+            stars.forEach(star => {
+                // Tạo hiệu ứng lấp lánh nhẹ
+                const twinkle = Math.random() > 0.95 ? 0 : star.alpha;
+                ctx.globalAlpha = twinkle;
+                ctx.beginPath();
+                ctx.arc(star.x * width, star.y * height, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1.0;
+        }
+
+        // Vẽ Mặt Trời (Cố định bên phải)
+        function drawSun() {
+            // Vị trí mặt trời: Bên phải màn hình
+            const sunX = width - 100;
+            const sunY = height / 2;
+
+            // Tạo hiệu ứng tỏa sáng (Gradient)
+            const gradient = ctx.createRadialGradient(sunX, sunY, SUN_RADIUS/4, sunX, sunY, SUN_RADIUS * 2);
+            gradient.addColorStop(0, '#fffeba'); // Vàng trắng tâm
+            gradient.addColorStop(0.2, '#ff8c00'); // Cam
+            gradient.addColorStop(1, 'rgba(255, 140, 0, 0)'); // Trong suốt ngoài cùng
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, SUN_RADIUS * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Vẽ khối mặt trời thực
+            ctx.fillStyle = '#ffae00';
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, SUN_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Chữ chú thích
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText("MẶT TRỜI", sunX, sunY + SUN_RADIUS + 20);
+
+            // Mũi tên lực hút từ Mặt Trời (nếu bật)
+            if (showForces) {
+                drawArrow(width/2 + 80, height/2, width/2 + 150, height/2, "rgba(255, 165, 0, 0.6)", "Lực Mặt Trời");
+            }
+        }
+
+        // Vẽ Trái Đất, Lớp Nước và Mặt Trăng
+        function drawSystem() {
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            // Chuyển đổi góc độ sang radian cho tính toán
+            const rad = moonAngle * (Math.PI / 180);
+
+            // --- TÍNH TOÁN VẬT LÝ ĐƠN GIẢN HÓA ---
+            // Quy ước: Mặt trời ở góc 0 độ (trục dương X).
+            // Lực thủy triều mạnh nhất khi góc trăng lệch 0 hoặc 180 so với mặt trời.
+            // Công thức mô phỏng độ phình: 
+            // Cos(2 * góc) sẽ bằng 1 khi góc = 0 hoặc 180 (Triều cường)
+            // và bằng -1 khi góc = 90 hoặc 270 (Triều kém).
+            
+            // Hệ số phình to thêm (dựa trên sự cộng hưởng Mặt trời)
+            // Cơ bản trăng hút làm phình 20px. Mặt trời thêm/bớt 10px.
+            const baseBulge = 20; 
+            const sunInfluence = 10 * Math.cos(2 * rad); 
+            const totalBulge = baseBulge + sunInfluence;
+
+            // --- VẼ LỚP NƯỚC (QUAN TRỌNG NHẤT) ---
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(rad); // Xoay lớp nước hướng về phía Mặt Trăng
+
+            ctx.fillStyle = 'rgba(65, 184, 255, 0.5)'; // Màu nước trong suốt
+            ctx.beginPath();
+            // Vẽ hình Elip: RadiusX dãn ra, RadiusY co lại chút để giữ thể tích (giả lập)
+            ctx.ellipse(0, 0, WATER_BASE_RADIUS + totalBulge, WATER_BASE_RADIUS - (totalBulge/3), 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Viền nước cho rõ
+            ctx.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+
+            // --- VẼ TRÁI ĐẤT ---
+            ctx.fillStyle = '#1a8cff'; // Đại dương xanh
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, EARTH_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Vẽ lục địa giả (màu xanh lá) cho sinh động
+            ctx.fillStyle = '#4caf50';
+            ctx.beginPath();
+            ctx.arc(centerX - 10, centerY - 10, 15, 0, Math.PI * 2); // Châu Á giả
+            ctx.arc(centerX + 20, centerY + 15, 10, 0, Math.PI * 2); // Châu Úc giả
+            ctx.fill();
+            
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText("TRÁI ĐẤT", centerX, centerY + 5);
+
+            // --- VẼ MẶT TRĂNG ---
+            const moonX = centerX + Math.cos(rad) * ORBIT_RADIUS;
+            const moonY = centerY + Math.sin(rad) * ORBIT_RADIUS;
+
+            // Vẽ quỹ đạo mờ
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, ORBIT_RADIUS, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Vẽ Mặt Trăng
+            ctx.fillStyle = '#dcdcdc';
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, MOON_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.fillText("MẶT TRĂNG", moonX, moonY + MOON_RADIUS + 15);
+
+            // --- VẼ LỰC HÚT MẶT TRĂNG (Nếu bật) ---
+            if (showForces) {
+                // Mũi tên từ Trái Đất hướng về Mặt Trăng
+                // Tính điểm bắt đầu (từ rìa Trái Đất)
+                const startX = centerX + Math.cos(rad) * 60;
+                const startY = centerY + Math.sin(rad) * 60;
+                const endX = centerX + Math.cos(rad) * 130;
+                const endY = centerY + Math.sin(rad) * 130;
+                
+                drawArrow(startX, startY, endX, endY, "rgba(255, 255, 255, 0.8)", "Lực Trăng");
+            }
+        }
+
+        // Hàm tiện ích vẽ mũi tên
+        function drawArrow(fromX, fromY, toX, toY, color, label) {
+            const headlen = 10; // độ dài đầu mũi tên
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const angle = Math.atan2(dy, dx);
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.stroke();
+
+            // Nhãn mũi tên
+            ctx.fillStyle = color;
+            ctx.font = '10px Arial';
+            ctx.fillText(label, (fromX + toX)/2, (fromY + toY)/2 - 5);
+        }
+
+        // 3. CẬP NHẬT TRẠNG THÁI & UI
+        function updateStatus() {
+            // Chuẩn hóa góc về 0-360
+            let angle = moonAngle % 360;
+            if (angle < 0) angle += 360;
+
+            let text = "";
+            let desc = "";
+            let color = "";
+
+            // Kiểm tra các góc đặc biệt (sai số +/- 15 độ)
+            const tolerance = 15;
+
+            // Triều Cường: 0 độ (Trăng Non) hoặc 180 độ (Trăng Tròn)
+            if (Math.abs(angle - 0) < tolerance || Math.abs(angle - 360) < tolerance || Math.abs(angle - 180) < tolerance) {
+                text = "TRIỀU CƯỜNG (Spring Tide)";
+                desc = "Mặt Trăng, Mặt Trời, Trái Đất thẳng hàng. Lực hút cộng hưởng làm nước dâng cao nhất!";
+                color = "#ff4d4d"; // Đỏ báo hiệu mạnh
+            } 
+            // Triều Kém: 90 độ hoặc 270 độ (Trăng Khuyết)
+            else if (Math.abs(angle - 90) < tolerance || Math.abs(angle - 270) < tolerance) {
+                text = "TRIỀU KÉM (Neap Tide)";
+                desc = "Mặt Trăng vuông góc Mặt Trời. Lực hút triệt tiêu nhau bớt, nước dâng thấp nhất.";
+                color = "#4facfe"; // Xanh nhẹ
+            } 
+            else {
+                text = "Trung bình";
+                desc = "Mực nước đang thay đổi giữa triều cường và triều kém.";
+                color = "#ffd200";
+            }
+
+            statusDisplay.textContent = "Trạng thái: " + text;
+            statusDisplay.style.color = color;
+            descDisplay.textContent = desc;
+        }
+
+        // 4. VÒNG LẶP CHÍNH (MAIN LOOP)
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            drawBackground();
+            drawSun(); // Vẽ Mặt Trời trước (lớp dưới)
+            drawSystem(); // Vẽ hệ Trái Đất - Mặt Trăng
+            updateStatus();
+
+            if (isRunning) {
+                moonAngle += 0.5; // Tốc độ xoay tự động
+                if (moonAngle >= 360) moonAngle = 0;
+                slider.value = moonAngle; // Cập nhật thanh trượt
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // 5. SỰ KIỆN TƯƠNG TÁC
+        slider.addEventListener('input', (e) => {
+            moonAngle = parseInt(e.target.value);
+            // Nếu người dùng kéo tay, tạm dừng tự động
+            if (isRunning) {
+                toggleAuto();
+            }
+        });
+
+        checkForce.addEventListener('change', (e) => {
+            showForces = e.target.checked;
+        });
+
+        function toggleAuto() {
+            isRunning = !isRunning;
+            if (isRunning) {
+                btnAuto.textContent = "|| Dừng lại";
+                btnAuto.classList.add('active');
+            } else {
+                btnAuto.textContent = "▶ Tự động chạy";
+                btnAuto.classList.remove('active');
+            }
+        }
+        
+        btnAuto.addEventListener('click', toggleAuto);
+
+        // Khởi chạy
+        animate();
+
+    </script>
+</body>
+</html>
