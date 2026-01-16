@@ -1,490 +1,106 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mô Phỏng Tổng Hợp: Chuyển Động Trái Đất</title>
-    <style>
-        :root {
-            --bg-color: #0F172A;
-            --panel-bg: #1E293B;
-            --text-color: #F8FAFC;
-            --highlight: #38BDF8;
-            --sun-color: #FBBF24;
-            --day-color: #FFD700; /* Vàng tươi */
-            --night-color: #334155;
-            --summer-hot: #EF4444;
-            --winter-cold: #3B82F6;
-            --equator-color: #FF4500; /* Màu đỏ cam cho xích đạo */
-        }
+<meta charset="UTF-8">
 
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
+<!-- BẮT BUỘC CHO ĐIỆN THOẠI -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        h2 { margin: 15px 0 5px; color: var(--sun-color); text-transform: uppercase; letter-spacing: 1px; }
-        .subtitle { font-size: 0.9em; color: #94A3B8; margin-bottom: 20px; }
+<title>Mô phỏng Trái Đất</title>
 
-        /* LAYOUT CHÍNH */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            width: 95%;
-            max-width: 1000px;
-            background: var(--panel-bg);
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
+<style>
+:root {
+  --bg-color: #020617;
+  --panel-bg: #020617;
+  --text-color: #E5E7EB;
+  --sun-color: #FACC15;
+  --highlight: #38BDF8;
+  --day-color: #FDE047;
+  --night-color: #020617;
+  --equator-color: #F97316;
+  --winter-cold: #38BDF8;
+  --summer-hot: #EF4444;
+}
 
-        /* KHUNG HÌNH ẢNH */
-        .visual-panel {
-            background: rgba(0,0,0,0.3);
-            border-radius: 12px;
-            height: 320px;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
+* { box-sizing: border-box; }
 
-        .panel-title {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-weight: bold;
-            font-size: 0.9em;
-            color: var(--highlight);
-            background: rgba(0,0,0,0.6);
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-        /* 1. Orbit View Styles */
-        .orbit-system { position: relative; width: 280px; height: 280px; }
-        .orbit-path {
-            width: 100%; height: 100%;
-            border: 1px dashed #64748B;
-            border-radius: 50%;
-            position: absolute;
-        }
-        .sun {
-            width: 40px; height: 40px;
-            background: radial-gradient(circle, #FFF, var(--sun-color));
-            border-radius: 50%;
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 25px var(--sun-color);
-        }
-        .earth-dot {
-            width: 16px; height: 16px;
-            background: #38BDF8;
-            border-radius: 50%;
-            position: absolute;
-            top: 0; left: 50%;
-            margin-left: -8px; margin-top: -8px;
-            box-shadow: 0 0 8px #38BDF8;
-        }
-        .orbit-label {
-            position: absolute; font-size: 10px; color: #94A3B8; text-align: center; width: 60px;
-        }
+/* TIÊU ĐỀ */
+h2 {
+  margin: 15px 0 5px;
+  color: var(--sun-color);
+  font-size: 1.2rem;
+  text-align: center;
+}
 
-        /* 2. Earth View Styles */
-        .earth-container { width: 200px; height: 200px; position: relative; }
-        .globe {
-            width: 100%; height: 100%;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #38BDF8, #1E3A8A);
-            transform: rotate(-23.5deg); /* Trục nghiêng */
-            position: relative;
-            overflow: hidden;
-            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.6);
-        }
-        .axis {
-            position: absolute; top: -30px; bottom: -30px; left: 50%;
-            width: 2px; background: rgba(255,255,255,0.6);
-            transform: rotate(-23.5deg);
-            z-index: 10;
-        }
-        .shadow-overlay {
-            position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: linear-gradient(90deg, rgba(0,0,0,0.85) 50%, transparent 50%);
-            transition: transform 0.1s linear;
-            z-index: 5;
-            pointer-events: none;
-        }
-        
-        /* BẢN ĐỒ VIỆT NAM - NGÔI SAO */
-        .vietnam-star {
-            position: absolute;
-            top: 36%; 
-            left: 50%;
-            width: 20px;
-            height: 20px;
-            transform: translate(-50%, -50%);
-            z-index: 2;
-            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8));
-        }
-        .star-shape {
-            fill: var(--day-color);
-            stroke: #B8860B;
-            stroke-width: 1;
-        }
-        
-        /* Vĩ tuyến 16 độ Bắc */
-        .latitude-line {
-            position: absolute; 
-            top: 36%;
-            left: 0; width: 100%; height: 1px;
-            border-top: 1px dotted rgba(255, 215, 0, 0.5);
-            z-index: 1;
-        }
-        .lat-label {
-            position: absolute; top: 36%; right: 5px; 
-            font-size: 9px; color: rgba(255, 215, 0, 0.7);
-            transform: translateY(-50%);
-        }
+.subtitle {
+  font-size: 0.9rem;
+  color: #94A3B8;
+  margin-bottom: 10px;
+  text-align: center;
+}
 
-        /* ĐƯỜNG XÍCH ĐẠO MỚI */
-        .equator-line {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: var(--equator-color);
-            box-shadow: 0 0 5px var(--equator-color);
-            z-index: 1;
-            opacity: 0.9;
-        }
-        .equator-label {
-            position: absolute;
-            top: 50%;
-            left: 5px;
-            transform: translateY(-50%);
-            font-size: 10px;
-            color: var(--equator-color);
-            font-weight: bold;
-            text-shadow: 0 0 2px black;
-        }
+/* LAYOUT */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 95%;
+  max-width: 900px;
+  padding: 12px;
+}
 
-        /* KHUNG HỆ QUẢ */
-        .consequences-box {
-            grid-column: 1 / -1;
-            background: rgba(255,255,255,0.05);
-            border-radius: 12px;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
+/* PANEL */
+.visual-panel {
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  height: 260px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-        .result-item { display: flex; flex-direction: column; gap: 10px; }
-        .result-header { font-weight: bold; color: var(--highlight); margin-bottom: 5px; border-bottom: 1px solid #334155; padding-bottom: 5px;}
+/* MOBILE: CHỈ 1 CỘT */
+@media (max-width: 768px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
 
-        /* Biểu đồ Ngày Đêm */
-        .day-night-bar {
-            width: 100%; height: 35px;
-            background: var(--night-color);
-            border-radius: 15px;
-            overflow: hidden;
-            position: relative;
-            display: flex;
-            align-items: center;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .day-part {
-            height: 100%;
-            background: var(--day-color);
-            width: 50%;
-            transition: width 0.2s ease;
-            display: flex; align-items: center; justify-content: center;
-            color: #000; font-size: 13px; font-weight: bold;
-            white-space: nowrap; overflow: hidden;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-        }
-        .night-part-label { position: absolute; right: 15px; font-size: 13px; color: #AAA; font-weight: bold; }
+  .visual-panel {
+    height: 220px;
+  }
+}
 
-        /* Đồng hồ đo Mùa */
-        .season-meter {
-            width: 100%; height: 10px;
-            background: linear-gradient(90deg, var(--winter-cold), #84CC16, var(--summer-hot), #84CC16, var(--winter-cold));
-            border-radius: 5px;
-            position: relative;
-            margin-top: 10px;
-        }
-        .season-indicator {
-            width: 14px; height: 14px;
-            background: #FFF; border: 2px solid #000;
-            border-radius: 50%;
-            position: absolute; top: -3px; left: 50%;
-            transform: translateX(-50%);
-            transition: left 0.2s;
-        }
-        .season-text { text-align: center; font-size: 1.2em; font-weight: bold; color: var(--text-color); margin-top: 5px; }
+/* GIẢM HIỆU ỨNG NẶNG */
+.sun {
+  width: 36px;
+  height: 36px;
+  background: radial-gradient(circle, #fff, var(--sun-color));
+  border-radius: 50%;
+}
+</style>
 
-        /* CONTROLS */
-        .controls-area {
-            grid-column: 1 / -1;
-            display: flex; flex-direction: column; align-items: center; gap: 10px;
-            margin-top: 10px;
-        }
-        input[type=range] { width: 80%; cursor: pointer; }
-        .btn-play {
-            background: var(--highlight); color: #000; border: none; padding: 10px 30px;
-            border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 1.1em;
-            transition: all 0.2s;
-        }
-        .btn-play:hover { background: #0EA5E9; transform: scale(1.05); }
-        .btn-play.paused { background: #EF4444; color: white; animation: pulse 1s infinite; }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-
-        .status-message { height: 20px; font-size: 0.9em; font-weight: bold; color: var(--day-color); text-align: center; }
-
-        @media (max-width: 600px) {
-            .dashboard { grid-template-columns: 1fr; }
-            .consequences-box { grid-template-columns: 1fr; }
-        }
-    </style>
 </head>
+
 <body>
 
-    <h2>Mô Phỏng Chuyển Động Trái Đất</h2>
-    <div class="subtitle">Quan sát tại 16°00′N 108°00′E (Việt Nam)</div>
+<h2>MÔ PHỎNG CHUYỂN ĐỘNG TRÁI ĐẤT</h2>
+<div class="subtitle">Xem tốt trên điện thoại</div>
 
-    <div class="dashboard">
-        
-        <!-- PANEL 1: QUỸ ĐẠO -->
-        <div class="visual-panel">
-            <div class="panel-title">1. Góc nhìn Vũ trụ</div>
-            <div class="orbit-system">
-                <div class="orbit-path"></div>
-                <div class="sun"></div>
-                <div class="earth-dot" id="earthOrbit"></div>
-                
-                <div class="orbit-label" style="top: -20px; left: 50%; transform: translateX(-50%); color: #84CC16; font-weight:bold;">Xuân (21/3)</div>
-                <div class="orbit-label" style="bottom: -20px; left: 50%; transform: translateX(-50%); color: #FBBF24; font-weight:bold;">Thu (23/9)</div>
-                <div class="orbit-label" style="left: -40px; top: 50%; transform: translateY(-50%); color: #EF4444; font-weight:bold;">Hạ (22/6)</div>
-                <div class="orbit-label" style="right: -40px; top: 50%; transform: translateY(-50%); color: #3B82F6; font-weight:bold;">Đông (22/12)</div>
-            </div>
-        </div>
+<div class="dashboard">
+  <div class="visual-panel">
+    <div class="sun"></div>
+  </div>
+</div>
 
-        <!-- PANEL 2: TRÁI ĐẤT -->
-        <div class="visual-panel">
-            <div class="panel-title">2. Góc nhìn Trái Đất (Cận cảnh)</div>
-            <div class="earth-container">
-                <div class="axis"></div>
-                <div style="position: absolute; top: -45px; left: 85px; font-size: 12px; color: #aaa;">Bắc (N)</div>
-                
-                <div class="globe">
-                    <!-- Đường Xích Đạo Mới -->
-                    <div class="equator-line"></div>
-                    <div class="equator-label">Xích đạo (0°)</div>
-
-                    <!-- Vạch vĩ tuyến 16 độ Bắc -->
-                    <div class="latitude-line"></div>
-                    <div class="lat-label">16°N</div>
-
-                    <!-- NGÔI SAO VIỆT NAM -->
-                    <svg class="vietnam-star" viewBox="0 0 24 24">
-                        <path class="star-shape" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-
-                    <!-- Bóng tối -->
-                    <div class="shadow-overlay" id="shadowOverlay"></div>
-                </div>
-            </div>
-            <div style="position: absolute; bottom: 10px; font-size: 11px; color: var(--day-color); display: flex; align-items: center; gap: 5px;">
-                <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#FFD700" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                Việt Nam (16°00′N 108°00′E)
-            </div>
-        </div>
-
-        <!-- PANEL HỆ QUẢ -->
-        <div class="consequences-box">
-            
-            <!-- HỆ QUẢ 1: MÙA -->
-            <div class="result-item">
-                <div class="result-header">Hệ quả 1: Các Mùa trong năm</div>
-                <div class="season-text" id="seasonText">Mùa Xuân</div>
-                <div style="font-size: 0.9em; color: #94A3B8; text-align: center;" id="seasonDesc">Thời tiết ấm áp</div>
-                
-                <div style="margin-top: 15px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #64748B; margin-bottom: 2px;">
-                        <span>Đông</span><span>Xuân</span><span>Hạ</span><span>Thu</span><span>Đông</span>
-                    </div>
-                    <div class="season-meter">
-                        <div class="season-indicator" id="seasonIndicator"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- HỆ QUẢ 2: NGÀY ĐÊM -->
-            <div class="result-item">
-                <div class="result-header">Hệ quả 2: Thời lượng Ngày & Đêm</div>
-                <div style="text-align: center; margin-bottom: 10px;">
-                    <span id="dayHours" style="font-weight: bold; color: var(--day-color);">12h</span> Sáng 
-                    <span style="color: #64748B;">/</span> 
-                    <span id="nightHours" style="font-weight: bold; color: #94A3B8;">12h</span> Tối
-                </div>
-
-                <div class="day-night-bar">
-                    <div class="day-part" id="dayBar">Ngày (Sáng)</div>
-                    <div class="night-part-label">Đêm (Tối)</div>
-                </div>
-                <div style="font-size: 11px; color: #64748B; margin-top: 5px; text-align: center;">
-                    Quan sát tại 16°N (Đà Nẵng)
-                </div>
-            </div>
-
-        </div>
-
-        <!-- ĐIỀU KHIỂN -->
-        <div class="controls-area">
-            <div class="status-message" id="statusMessage"></div>
-            <input type="range" id="mainSlider" min="0" max="360" value="90" oninput="updateSim(this.value)">
-            <button class="btn-play" id="btnPlay" onclick="togglePlay()">Chạy / Dừng</button>
-        </div>
-    </div>
-
-    <script>
-        let angle = 90; 
-        let isPlaying = false;
-        let animFrame;
-
-        const earthOrbit = document.getElementById('earthOrbit');
-        const shadowOverlay = document.getElementById('shadowOverlay');
-        const slider = document.getElementById('mainSlider');
-        const btnPlay = document.getElementById('btnPlay');
-        const statusMessage = document.getElementById('statusMessage');
-
-        // UI Elements
-        const seasonText = document.getElementById('seasonText');
-        const seasonDesc = document.getElementById('seasonDesc');
-        const seasonIndicator = document.getElementById('seasonIndicator');
-        const dayBar = document.getElementById('dayBar');
-        const dayHoursText = document.getElementById('dayHours');
-        const nightHoursText = document.getElementById('nightHours');
-
-        function updateSim(val) {
-            angle = parseFloat(val);
-            
-            // 1. Cập nhật vị trí Quỹ đạo
-            const rad = angle * (Math.PI / 180);
-            const x = 50 + (45 * Math.cos(rad)); 
-            const y = 50 - (45 * Math.sin(rad)); 
-            earthOrbit.style.left = x + '%';
-            earthOrbit.style.top = y + '%';
-
-            // 2. Cập nhật Bóng tối
-            shadowOverlay.style.transform = `rotate(${angle + 90}deg)`;
-
-            // 3. Tính toán Hệ quả tại 16 độ Bắc
-            
-            let variation = 1.3 * Math.cos(rad); // Biên độ biến thiên tại Đà Nẵng
-            let dayLength = 12 - variation;
-            let nightLength = 24 - dayLength;
-            
-            dayHoursText.innerText = dayLength.toFixed(1) + 'h';
-            nightHoursText.innerText = nightLength.toFixed(1) + 'h';
-            
-            let dayPercent = (dayLength / 24) * 100;
-            dayBar.style.width = dayPercent + '%';
-
-            // --- Hệ quả Mùa ---
-            let seasonPercent = (angle / 360) * 100;
-            seasonIndicator.style.left = seasonPercent + '%';
-
-            // Text Mùa và Màu sắc
-            if (angle >= 80 && angle < 100) {
-                seasonText.innerText = "Xuân Phân (21/3)";
-                seasonDesc.innerText = "Ấm áp, Ngày = Đêm";
-                seasonText.style.color = "#84CC16";
-            } else if (angle >= 100 && angle < 170) {
-                seasonText.innerText = "Mùa Hè";
-                seasonDesc.innerText = "Nóng bức, Ngày dài hơn Đêm";
-                seasonText.style.color = "#EF4444";
-            } else if (angle >= 170 && angle < 190) {
-                seasonText.innerText = "Hạ Chí (22/6)";
-                seasonDesc.innerText = "Nóng nhất, Ngày dài nhất";
-                seasonText.style.color = "#EF4444";
-            } else if (angle >= 190 && angle < 260) {
-                seasonText.innerText = "Mùa Thu";
-                seasonDesc.innerText = "Mát mẻ, Ngày ngắn dần";
-                seasonText.style.color = "#FBBF24";
-            } else if (angle >= 260 && angle < 280) {
-                seasonText.innerText = "Thu Phân (23/9)";
-                seasonDesc.innerText = "Mát mẻ, Ngày = Đêm";
-                seasonText.style.color = "#FBBF24";
-            } else if (angle >= 280 && angle < 350) {
-                seasonText.innerText = "Mùa Đông";
-                seasonDesc.innerText = "Lạnh giá, Đêm dài hơn Ngày";
-                seasonText.style.color = "#3B82F6";
-            } else {
-                seasonText.innerText = "Đông Chí (22/12)";
-                seasonDesc.innerText = "Lạnh nhất, Đêm dài nhất";
-                seasonText.style.color = "#3B82F6";
-            }
-        }
-
-        function togglePlay() {
-            if (isPlaying) {
-                stopAnimation();
-            } else {
-                startAnimation();
-            }
-        }
-
-        function startAnimation() {
-            isPlaying = true;
-            btnPlay.innerText = "Dừng lại";
-            btnPlay.classList.remove("paused");
-            statusMessage.innerText = "";
-            loop();
-        }
-
-        function stopAnimation() {
-            isPlaying = false;
-            cancelAnimationFrame(animFrame);
-            btnPlay.innerText = "Tiếp tục chạy";
-            btnPlay.classList.add("paused");
-        }
-
-        function loop() {
-            if (!isPlaying) return;
-            
-            angle += 0.5;
-            if (angle >= 360) angle = 0;
-            
-            slider.value = angle;
-            updateSim(angle);
-
-            if (angle === 90 || angle === 180 || angle === 270 || angle === 0) {
-                stopAnimation();
-                statusMessage.innerText = "ĐÃ TỰ ĐỘNG DỪNG ĐỂ QUAN SÁT!";
-                return; 
-            }
-
-            animFrame = requestAnimationFrame(loop);
-        }
-
-        updateSim(90);
-
-    </script>
 </body>
 </html>
