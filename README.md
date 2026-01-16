@@ -2,52 +2,105 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+
+<!-- BẮT BUỘC CHO ĐIỆN THOẠI -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bài giảng Địa lí – Tự nhiên</title>
+
+<title>Mô phỏng Trái Đất</title>
 
 <style>
-*{box-sizing:border-box}
-body{
-    margin:0;
-    font-family:Arial, Helvetica, sans-serif;
-    background:#0f172a;
-    color:#e5e7eb;
+:root {
+  --bg-color: #020617;
+  --panel-bg: #020617;
+  --text-color: #E5E7EB;
+  --sun-color: #FACC15;
+  --highlight: #38BDF8;
+  --day-color: #FDE047;
+  --night-color: #020617;
+  --equator-color: #F97316;
+  --winter-cold: #38BDF8;
+  --summer-hot: #EF4444;
 }
-header{
-    background:#020617;
-    padding:12px;
-    text-align:center;
-    font-size:16px;
-    font-weight:bold;
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-nav{
-    display:flex;
-    gap:8px;
-    padding:10px;
-    background:#020617;
-    overflow-x:auto;
+
+/* TIÊU ĐỀ */
+h2 {
+  margin: 15px 0 5px;
+  color: var(--sun-color);
+  font-size: 1.2rem;
+  text-align: center;
 }
-nav button{
-    flex:0 0 auto;
-    padding:8px 12px;
-    border:none;
-    border-radius:8px;
-    background:#1e293b;
-    color:white;
-    font-size:14px;
+
+.subtitle {
+  font-size: 0.9rem;
+  color: #94A3B8;
+  margin-bottom: 10px;
+  text-align: center;
 }
-nav button.active{
-    background:#38bdf8;
-    color:black;
-    font-weight:bold;
+
+/* LAYOUT */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 95%;
+  max-width: 900px;
+  padding: 12px;
 }
-section{
-    display:none;
-    padding:15px;
+
+/* PANEL */
+.visual-panel {
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  height: 260px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-section.active{display:block}
-.box{
-    background:#1e293b;
-    padding:15px;
-    border-radius:12px;
-    marg
+
+/* MOBILE: CHỈ 1 CỘT */
+@media (max-width: 768px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .visual-panel {
+    height: 220px;
+  }
+}
+
+/* GIẢM HIỆU ỨNG NẶNG */
+.sun {
+  width: 36px;
+  height: 36px;
+  background: radial-gradient(circle, #fff, var(--sun-color));
+  border-radius: 50%;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>MÔ PHỎNG CHUYỂN ĐỘNG TRÁI ĐẤT</h2>
+<div class="subtitle">Xem tốt trên điện thoại</div>
+
+<div class="dashboard">
+  <div class="visual-panel">
+    <div class="sun"></div>
+  </div>
+</div>
+
+</body>
+</html>
